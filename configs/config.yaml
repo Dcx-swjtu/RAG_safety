@@ -1,0 +1,346 @@
+# ============================================================================
+# VeriRAG 主配置文件
+# ============================================================================
+# VeriRAG: RL + Verification 驱动的新一代 RAG 防御系统
+# 配置版本: v1.0
+# ============================================================================
+
+# ============================================================================
+# 模型配置
+# ============================================================================
+model:
+  # 状态空间维度
+  state_dim: 512          # 状态向量维度 (Query:128 + Doc:128 + Conflict:64 + History:64 + Fusion)
+  
+  # 动作空间维度
+  action_dim: 5           # 离散动作数 (SKIP, LIGHT, DEEP, EXPAND, REJECT)
+  
+  # 网络架构
+  hidden_dim: 256         # 隐藏层维度
+  num_layers: 6           # Transformer编码器层数
+  
+  # BERT配置
+  bert_model_name: "bert-base-uncased"
+  use_pretrained_encoder: false  # 默认使用轻量本地编码器；有本地BERT缓存/联网时可改为true
+  allow_remote_model_download: false
+  bert_output_dim: 768    # BERT输出维度
+  bert_frozen_layers: 8   # 冻结的BERT层数 (前8层冻结)
+  
+  # 文档编码
+  max_docs: 10            # 最大文档数
+  doc_embedding_dim: 256  # 文档嵌入维度
+  num_attention_heads: 8  # 多头注意力头数
+  
+  # 历史编码
+  history_length: 10      # 历史步数
+  
+  # 层次策略
+  hierarchical: true      # 是否使用层次策略
+  num_level1_actions: 3   # Level 1动作数 (SKIP, VERIFY, REJECT)
+  num_level2_actions: 3   # Level 2动作数 (LIGHT, DEEP, EXPAND)
+
+
+# ============================================================================
+# 声明提取器配置
+# ============================================================================
+claim_extractor:
+  # 规则引擎
+  rule_engine_enabled: true       # 启用规则引擎
+  extract_all_numerical: true     # 提取所有数值
+  preserve_original_string: true  # 保留原始字符串 (防御Embedding Blind Spot)
+  
+  # LLM提取器 (可选)
+  llm_extractor_enabled: false    # 启用LLM辅助提取
+  llm_model: "microsoft/phi-2"    # 轻量LLM模型
+  
+  # 过滤参数
+  min_confidence: 0.7             # 最低置信度阈值
+  
+  # 声明类型提取
+  supported_types:
+    - factual
+    - numerical
+    - temporal
+    - causal
+    - comparative
+    - attributive
+
+
+# ============================================================================
+# 交叉验证器配置
+# ============================================================================
+cross_validator:
+  # 容差配置
+  tolerance_method: "adaptive"    # 容差方法 (absolute/relative/adaptive)
+  default_tolerance: 0.01         # 默认容差
+  precision_drift_threshold: 0.1  # 精度漂移阈值 (Embedding Blind Spot检测)
+  
+  # 验证模式
+  semantic_check_enabled: true    # 启用语义检查
+  numerical_strict_mode: true     # 严格数值模式
+  
+  # 特征
+  check_value_precision: true     # 检查数值精度
+  check_temporal_consistency: true  # 检查时间一致性
+  check_entity_aliases: true      # 检查实体别名
+
+
+# ============================================================================
+# 攻击模拟器配置
+# ============================================================================
+attack_simulator:
+  # 攻击参数
+  seed: 42                  # 随机种子
+  
+  # 攻击类型
+  attack_types:
+    - poisonedrag
+    - oneshot
+    - refinerag
+    - semantic_chameleon
+    - adaptive
+  
+  # 自适应攻击参数
+  adaptive_params:
+    learning_rate: 0.01     # 攻击策略学习率
+    exploration_rate: 0.2   # 探索率
+    history_window: 100     # 反馈历史窗口
+  
+  # 攻击约束
+  max_injection_docs: 10    # 最大注入文档数
+  min_text_length: 20       # 最小文本长度
+  stealth_levels:
+    - 0.2                   # 低隐蔽性
+    - 0.5                   # 中隐蔽性
+    - 0.8                   # 高隐蔽性
+
+
+# ============================================================================
+# 防御编排器配置
+# ============================================================================
+defense:
+  # 验证阈值
+  light_verify_threshold: 0.3     # 轻量验证阈值
+  deep_verify_threshold: 0.6      # 深度验证阈值
+  reject_threshold: 0.8           # 拒绝阈值
+  
+  # 四层验证
+  enable_four_layer: true         # 启用四层验证
+  
+  # 超时设置
+  max_verification_time_ms: 2000  # 最大验证时间 (毫秒)
+  max_retries: 3                  # 最大重试次数
+  
+  # 日志
+  enable_audit_log: true          # 启用审计日志
+
+
+# ============================================================================
+# 奖励函数配置
+# ============================================================================
+reward:
+  # 权重配置
+  weights:
+    correctness: 0.5        # 答案正确性权重
+    safety: 0.3             # 安全性权重
+    efficiency: 0.15        # 效率权重
+    verification: 0.05      # 验证准确性权重
+  
+  # 自适应权重调度
+  adaptive_schedule: true   # 启用自适应权重
+  
+  # 奖励信号强度
+  reward_correct_detect: 10.0     # 正确检测攻击奖励
+  reward_correct_pass: 5.0        # 正确通过良性奖励
+  penalty_miss_attack: -10.0      # 漏检攻击惩罚
+  penalty_false_reject: -8.0      # 误杀良性惩罚
+  
+  # 验证成本
+  cost_per_verification: 1.0       # 每次验证成本
+  max_steps: 20                    # 最大步数
+
+
+# ============================================================================
+# 训练配置
+# ============================================================================
+training:
+  # 优化器
+  lr: 3e-4                # 学习率
+  weight_decay: 1e-5      # 权重衰减
+  lr_schedule: "cosine"   # 学习率调度 (cosine/linear/none)
+  
+  # PPO参数
+  gamma: 0.99             # 折扣因子
+  gae_lambda: 0.95        # GAE lambda
+  clip_epsilon: 0.2       # PPO裁剪系数
+  entropy_coef: 0.01      # 熵奖励系数
+  value_coef: 0.5         # 价值损失系数
+  max_grad_norm: 0.5      # 梯度裁剪阈值
+  
+  # 训练参数
+  batch_size: 64          # 批次大小
+  rollout_length: 200     # Rollout长度
+  epochs_per_update: 4    # 每次更新epoch数
+  total_steps: 100000     # 总训练步数
+  
+  # 训练阶段
+  warm_start_steps: 1000  # Warm-start步数
+  single_agent_steps: 50000  # 单Agent训练步数
+  adversarial_steps: 50000   # 对抗进化步数
+  
+  # 环境参数
+  max_steps_per_episode: 20    # 每episode最大步数
+  attack_probability: 0.5      # 攻击概率
+  
+  # 多GPU
+  use_multi_gpu: true       # 使用多GPU
+  device_ids: [0]           # GPU设备ID列表
+  
+  # Checkpoint
+  checkpoint_dir: "./checkpoints"
+  checkpoint_freq: 1000     # Checkpoint频率 (步)
+  keep_last_n: 5            # 保留最近N个checkpoint
+  
+  # 日志
+  log_freq: 100             # 日志频率 (步)
+  
+  # 种子
+  seed: 42
+
+
+# ============================================================================
+# 对抗进化配置
+# ============================================================================
+adversarial:
+  # 种群配置
+  num_attack_agents: 8    # 攻击Agent数量
+  num_defense_agents: 8   # 防御Agent数量
+  
+  # PBT (Population Based Training)
+  pbt_frequency: 100       # PBT频率 (步)
+  pbt_exploit_ratio: 0.2   # PBT利用比例
+  pbt_explore_noise: 0.1   # PBT探索噪声
+  
+  # 进化参数
+  evolution_steps: 50000   # 进化总步数
+  mutation_rate: 0.05      # 突变率
+  crossover_rate: 0.3      # 交叉率
+  
+  # 评估
+  evaluation_episodes: 50  # 评估episode数
+
+
+# ============================================================================
+# 评估配置
+# ============================================================================
+evaluation:
+  # 数据集
+  datasets:
+    - nq
+    - hotpotqa
+    - ms_marco
+  
+  # 评估参数
+  n_questions: 100          # 评估问题数
+  n_attacks: 5             # 每问题攻击数
+  
+  # 种子
+  seeds: [42, 43, 44, 45, 46]
+  
+  # 攻击类型
+  attack_types:
+    - poisonedrag
+    - oneshot
+    - refinerag
+    - semantic_chameleon
+    - adaptive
+  
+  # 指标
+  metrics:
+    - asr                    # Attack Success Rate
+    - acc                    # Accuracy on Clean
+    - f1                     # F1 Score
+    - dacc                   # Detection Accuracy
+    - fpr                    # False Positive Rate
+    - fnr                    # False Negative Rate
+    - dr                     # Defense Rate
+  
+  # 基线对比
+  baselines:
+    - no_defense
+    - paraphrasing
+    - instructrag
+    - robustrag
+    - astuterag
+  
+  # Ablation study
+  ablation_study:
+    enabled: true
+    components:
+      - claim_extraction
+      - cross_validation
+      - policy_network
+      - four_layer_verification
+
+
+# ============================================================================
+# 数据配置
+# ============================================================================
+data:
+  # 数据目录
+  data_dir: "./data"
+  
+  # 数据集
+  datasets:
+    - nq
+    - hotpotqa
+    - ms_marco
+  
+  # 划分比例
+  split_ratios: [0.8, 0.1, 0.1]   # [train, val, test]
+  
+  # 最小样本数
+  min_samples: 1000
+  
+  # 缓存
+  cache_dir: "./data/cache"
+  use_cache: true
+
+
+# ============================================================================
+# 环境配置
+# ============================================================================
+env:
+  # 状态空间
+  state_dim: 512          # 状态维度
+  action_dim: 5           # 动作维度
+  
+  # 奖励
+  reward_type: "multi_objective"  # 奖励类型
+  
+  # 约束
+  max_steps_per_episode: 20
+  attack_probability: 0.5
+
+
+# ============================================================================
+# 日志配置
+# ============================================================================
+logging:
+  level: "INFO"           # 日志级别
+  format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+  file: "./logs/verirag.log"
+  console: true
+
+
+# ============================================================================
+# 实验配置
+# ============================================================================
+experiment:
+  name: "verirag_v1"      # 实验名称
+  description: "VeriRAG RL defense system training"
+  tags:
+    - "rag"
+    - "rl"
+    - "security"
+    - "verification"

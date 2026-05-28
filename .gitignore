@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local environments
+.venv/
+venv/
+env/
+
+# Large/generated datasets
+data/
+data_*/
+*.jsonl
+*.partial.jsonl
+
+# Experiment outputs and checkpoints
+experiments/
+logs/
+results/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+
+# Model and third-party checkouts
+models/
+third_party/*/.git/
+
+# Runtime logs
+*.log
+*.pid
+*.partial.jsonl
+
+# Keep source docs/config indices tracked when using git add -f if needed.

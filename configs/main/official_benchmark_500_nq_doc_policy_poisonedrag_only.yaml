@@ -1,0 +1,87 @@
+model:
+  state_dim: 512
+  action_dim: 5
+  hidden_dim: 256
+  max_docs: 10
+  use_pretrained_encoder: false
+  allow_remote_model_download: false
+claim_extractor:
+  rule_engine_enabled: true
+  llm_extractor_enabled: false
+  min_confidence: 0.7
+cross_validator:
+  tolerance_method: adaptive
+  numerical_strict_mode: true
+attack_simulator:
+  seed: 42
+  max_injection_docs: 10
+  min_text_length: 20
+defense:
+  light_verify_threshold: 0.3
+  deep_verify_threshold: 0.6
+  reject_threshold: 0.8
+  enable_four_layer: true
+  use_neural_policy: false
+  policy_deterministic: true
+  enable_doc_scorer: true
+  enable_nq_doc_policy: true
+  nq_doc_policy_checkpoint: experiments/nq_doc_policy_checkpoints/nq_doc_policy_step_3072.pt
+  nq_doc_policy_deterministic: true
+  nq_doc_policy_max_docs: 32
+  enable_conflict_aware_generation: true
+  conflict_aware_query_instruction: false
+  conflict_aware_generation:
+    high_risk_threshold: 0.70
+    conflict_risk_threshold: 0.45
+    support_floor: 0.10
+    min_docs: 1
+    max_drop_fraction: 0.85
+    abstain_if_no_safe_docs: true
+  doc_filter_threshold: 0.50
+  doc_score_detection_threshold: 0.50
+  min_docs_after_filter: 1
+  max_doc_drop_fraction: 0.85
+  feature_extractor:
+    embedding_dim: 768
+    max_docs: 32
+  doc_scorer:
+    type: learned
+    model_path: experiments/doc_scorer/nq_learned_doc_scorer.pt
+    ensemble_weight: 1.0
+    use_source_prior: false
+reward:
+  weights:
+    correctness: 0.5
+    safety: 0.3
+    efficiency: 0.15
+    verification: 0.05
+  adaptive_schedule: false
+training:
+  seed: 42
+evaluation:
+  datasets:
+    - nq
+  n_questions: 500
+  split_map:
+    nq: test
+  n_attacks: 5
+  attack_types:
+    - poisonedrag
+  seeds:
+    - 42
+  require_fixed_attacks: true
+data:
+  data_dir: data_official_benchmark_500
+  datasets:
+    - nq
+  min_samples: 100
+env:
+  state_dim: 512
+  action_dim: 5
+  max_steps_per_episode: 1
+  attack_probability: 0.5
+benchmark:
+  fixed_attacks: true
+  gold_only: true
+  data_dir: data_official_benchmark_500
+  manifest: data_official_benchmark_500/official_benchmark_manifest.json

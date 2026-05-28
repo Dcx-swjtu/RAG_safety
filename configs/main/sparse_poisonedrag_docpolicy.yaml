@@ -1,0 +1,99 @@
+model:
+  state_dim: 512
+  action_dim: 5
+  hidden_dim: 256
+  max_docs: 10
+  use_pretrained_encoder: false
+  allow_remote_model_download: false
+claim_extractor:
+  rule_engine_enabled: true
+  llm_extractor_enabled: false
+  min_confidence: 0.7
+cross_validator:
+  tolerance_method: adaptive
+  numerical_strict_mode: true
+attack_simulator:
+  seed: 42
+  max_injection_docs: 10
+  min_text_length: 20
+defense:
+  light_verify_threshold: 0.3
+  deep_verify_threshold: 0.6
+  reject_threshold: 0.8
+  enable_four_layer: true
+  use_neural_policy: true
+  policy_deterministic: true
+  enable_doc_scorer: true
+  doc_filter_threshold: 0.18
+  doc_score_detection_threshold: 0.18
+  min_docs_after_filter: 1
+  max_doc_drop_fraction: 0.85
+  doc_scorer:
+    use_source_prior: false
+reward:
+  weights:
+    correctness: 0.5
+    safety: 0.3
+    efficiency: 0.15
+    verification: 0.05
+  reward_correct_detect: 10.0
+  reward_correct_pass: 5.0
+  penalty_miss_attack: -10.0
+  penalty_false_reject: -8.0
+  cost_per_verification: 1.0
+training:
+  lr: 3e-4
+  lr_schedule: cosine
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  entropy_coef: 0.01
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  batch_size: 8
+  rollout_length: 8
+  epochs_per_update: 1
+  total_steps: 16
+  warm_start_steps: 8
+  max_steps_per_episode: 1
+  attack_probability: 0.5
+  use_multi_gpu: false
+  checkpoint_dir: ./experiments/ppo_sparse_poisonedrag_fixed_formal_checkpoints
+  checkpoint_freq: 16
+  log_freq: 8
+  seed: 42
+evaluation:
+  datasets:
+  - nq
+  - hotpotqa
+  n_questions: 1000
+  split_map:
+    nq: test
+    hotpotqa: test
+  n_attacks: 5
+  seeds:
+  - 42
+  - 43
+  - 44
+  - 45
+  - 46
+  require_fixed_attacks: true
+  attack_types:
+  - poisonedrag
+data:
+  data_dir: data_sparse_poisonedrag_aligned
+  datasets:
+  - nq
+  - hotpotqa
+  min_samples: 100
+env:
+  state_dim: 512
+  action_dim: 5
+  max_steps_per_episode: 1
+  attack_probability: 0.5
+benchmark:
+  fixed_attacks: true
+  gold_only: true
+  data_dir: data_sparse_poisonedrag_aligned
+  manifest: data_sparse_poisonedrag_aligned/sparse_poisonedrag_alignment_manifest.json
+  paper_attack_source: Sparse-Document-Attention-RAG PoisonedRAG GPT-4 CSV

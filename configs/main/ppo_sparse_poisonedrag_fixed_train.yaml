@@ -1,0 +1,75 @@
+model:
+  state_dim: 512
+  action_dim: 5
+  hidden_dim: 256
+  max_docs: 10
+  use_pretrained_encoder: false
+  allow_remote_model_download: false
+claim_extractor:
+  rule_engine_enabled: true
+  llm_extractor_enabled: false
+  min_confidence: 0.7
+cross_validator:
+  tolerance_method: adaptive
+  numerical_strict_mode: true
+attack_simulator:
+  seed: 42
+reward:
+  weights:
+    correctness: 0.5
+    safety: 0.3
+    efficiency: 0.15
+    verification: 0.05
+  cost_per_verification: 1.0
+defense:
+  use_neural_policy: true
+  policy_deterministic: true
+  enable_doc_scorer: true
+  doc_filter_threshold: 0.18
+  doc_score_detection_threshold: 0.18
+  min_docs_after_filter: 1
+  max_doc_drop_fraction: 0.85
+  doc_scorer:
+    use_source_prior: false
+training:
+  use_fixed_attack_env: true
+  lr: 0.0003
+  lr_schedule: cosine
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  entropy_coef: 0.01
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  batch_size: 32
+  rollout_length: 64
+  epochs_per_update: 2
+  total_steps: 20000
+  warm_start_steps: 0
+  max_steps_per_episode: 1
+  attack_probability: 0.65
+  use_multi_gpu: true
+  checkpoint_dir: ./experiments/ppo_sparse_poisonedrag_fixed_formal_checkpoints
+  checkpoint_freq: 2000
+  log_freq: 500
+  seed: 42
+data:
+  data_dir: data_sparse_poisonedrag_aligned
+  datasets:
+    - nq
+    - hotpotqa
+env:
+  use_fixed_attack_env: true
+  max_docs: 10
+  attack_type: poisonedrag
+  doc_filter_threshold: 0.18
+  min_docs_after_filter: 1
+  max_doc_drop_fraction: 0.85
+evaluation:
+  datasets:
+    - nq
+    - hotpotqa
+  n_questions: 1000
+  require_fixed_attacks: true
+  attack_types:
+    - poisonedrag

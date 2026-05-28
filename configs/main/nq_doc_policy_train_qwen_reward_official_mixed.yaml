@@ -1,0 +1,60 @@
+seed: 42
+
+environment:
+  data_dir: data_official_mixed_attack_nq_split
+  split: train
+  max_docs: 10
+  attack_probability: 0.55
+  attack_types:
+    - poisonedrag_lm_targeted
+    - poisonedrag_hotflip
+    - garag
+    - tan_et_al
+    - advdecoding
+  feature_extractor:
+    embedding_dim: 768
+    max_docs: 10
+  doc_scorer:
+    type: learned
+    model_path: experiments/doc_scorer/nq_official_mixed_train_learned_doc_scorer.pt
+    threshold: 0.18
+    ensemble_weight: 1.0
+    use_source_prior: false
+  qwen_reward:
+    enabled: true
+    sample_rate: 1.0
+    cache: true
+    backend: transformers
+    load_model: true
+    model_path: /mnt/cpfs/chenxudu/workspace/models/Qwen3-VL-8B-Instruct
+    max_docs: 5
+    max_doc_chars: 900
+    generation_max_tokens: 64
+    use_verifier: true
+    correct_bonus: 4.0
+    clean_wrong_penalty: 4.0
+    target_answer_penalty: 10.0
+    verified_correct_bonus: 2.0
+    unsupported_penalty: 2.0
+
+policy:
+  hidden_dim: 256
+  doc_state_dim: 128
+  global_dim: 256
+  dropout: 0.1
+
+training:
+  total_steps: 5000
+  rollout_length: 128
+  batch_size: 64
+  epochs_per_update: 4
+  lr: 3.0e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  entropy_coef: 0.01
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  log_freq: 256
+  checkpoint_freq: 1000
+  checkpoint_dir: experiments/nq_doc_policy_qwen_reward_official_mixed_checkpoints
