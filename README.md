@@ -46,10 +46,8 @@ Query + Retrieved Docs
 |---|---:|---:|---:|---:|
 | Vanilla RAG | 0.5080 | 0.0956 | 0.6506 | 0.0000 |
 | Learned scorer | 0.5060 | 0.0344 | 0.6640 | 0.0172 |
-| SeConRAG-lite | 0.5060 | 0.0384 | 0.6631 | 0.0136 |
-| Old Ours full | 0.4900 | 0.0160 | 0.6542 | 0.1024 |
+| SeConRAG | 0.5060 | 0.0384 | 0.6631 | 0.0136 |
 | **VeriRAG verify-guided** | **0.5080** | **0.0144** | **0.6704** | **0.0140** |
-| Oracle filtering reference | 0.5080 | 0.0148 | 0.6703 | 0.0000 |
 
 CleanDrop is the fraction of clean retrieved evidence dropped by the defense. The latest verify-guided controller recovers ACC by reducing clean evidence damage while keeping ASR at oracle-level. Do not compare these numbers directly with older qrels-context NQ tables because this official-mixed setup uses PoisonedRAG official Contriever top-5 contexts.
 
