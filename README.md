@@ -385,6 +385,7 @@ adversarial:
 
 ## 技术文档
 
+- [技术文档索引](docs/README.md)
 - [系统架构设计](docs/architecture.md)
 - [RL训练流程](docs/training_pipeline.md)
 - [数据构建方案](docs/data_construction.md)
