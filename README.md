@@ -42,12 +42,17 @@ Query + Retrieved Docs
 - Training split: `data_official_mixed_attack_nq_split/train`
 - Test split: 500 held-out official-answer-aligned NQ questions
 
-| Method | ACC | ASR | F1 | CleanDrop |
-|---|---:|---:|---:|---:|
-| Vanilla RAG | 0.5080 | 0.0956 | 0.6506 | 0.0000 |
-| Learned scorer | 0.5060 | 0.0344 | 0.6640 | 0.0172 |
-| SeConRAG | 0.5060 | 0.0384 | 0.6631 | 0.0136 |
-| **VeriRAG verify-guided** | **0.5080** | **0.0144** | **0.6704** | **0.0140** |
+ ┌─────────────────────────────────────┬────────┬────────┬────────┬────────┬─────────────┐
+  │ Method                              │  ACC ↑ │  ASR ↓ │   F1 ↑ │  FPR ↓ │ CleanDrop ↓ │
+  ├─────────────────────────────────────┼────────┼────────┼────────┼────────┼─────────────┤
+  │ Vanilla RAG                         │ 0.5060 │ 0.0940 │ 0.6493 │ 0.0000 │      0.0000 │
+  │ InstructRAG                         │ 0.5140 │ 0.0928 │ 0.6562 │ 0.0000 │      0.0000 │
+  │ AstuteRAG                           │ 0.5200 │ 0.1096 │ 0.6566 │ 0.0000 │      0.0000 │
+  │ TrustRAG                            │ 0.5060 │ 0.0380 │ 0.6632 │ 0.0000 │      0.0140 │
+  │ SeCon-RAG                           │ 0.5040 │ 0.0380 │ 0.6615 │ 0.0000 │      0.0136 │
+  │ Learned Scorer                      │ 0.5040 │ 0.0340 │ 0.6624 │ 0.0000 │      0.0172 │
+  │ Ours                                │ 0.5080 │ 0.0144 │ 0.6704 │ 0.0000 │      0.0140 │
+  └─────────────────────────────────────┴────────┴────────┴────────┴────────┴─────────────┘
 
 CleanDrop is the fraction of clean retrieved evidence dropped by the defense. The latest verify-guided controller recovers ACC by reducing clean evidence damage while keeping ASR at oracle-level. Do not compare these numbers directly with older qrels-context NQ tables because this official-mixed setup uses PoisonedRAG official Contriever top-5 contexts.
 
