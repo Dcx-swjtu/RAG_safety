@@ -1,83 +1,76 @@
 # VeriRAG Experiment Layout
 
-This project now keeps reproducible experiment assets under stable top-level
-directories while preserving the original `experiments/` outputs.
+This project keeps source code, configuration, and reproducibility notes in Git.
+Generated datasets, experiment logs, checkpoints, and model weights are excluded
+from the repository.
 
-## Directory Map
+## Current Main Experiment
 
-- `configs/main/`: canonical configs for main training and evaluation runs.
-- `configs/ablation/`: configs for controlled ablation and threshold sweeps.
-- `results/main/`: canonical result reports copied from completed runs.
-- `results/ablation/`: reserved for scorer-only, PPO-only, verify ablations, and threshold sweeps.
-- `checkpoints/policy/`: stable links to policy checkpoints.
-- `checkpoints/doc_scorer/`: stable links to learned document scorer checkpoints.
-- `scripts/reproduce/`: reproducible command wrappers for main experiments.
+The current paper-facing setup is the official-mixed NQ500 benchmark with unified
+Qwen generation. It combines held-out official-answer-aligned NQ questions with
+mixed official-code attack implementations.
 
-Original files remain in `experiments/` for backward compatibility.
+- Dataset directory: `data_official_mixed_attack_nq500`
+- Train/dev/test directory: `data_official_mixed_attack_nq_split`
+- Generator: `Qwen3-VL-8B-Instruct`
+- Test questions: 500 held-out NQ samples
+- Attacks: `poisonedrag_lm_targeted`, `poisonedrag_hotflip`, `garag`, `tan_et_al`, `advdecoding`
+- Main config: `configs/main/official_mixed_attack_nq500_qwen_reward_official_mixed_trained.yaml`
 
-## Main Checkpoints
+## Main Official-Mixed NQ500 Results
 
-- PPO policy:
-  `checkpoints/policy/ppo_sparse_poisonedrag_fixed_formal/final_model.pt`
-- Learned doc scorer:
-  `checkpoints/doc_scorer/learned_doc_scorer.pt`
+| Method | ACC | ASR | F1 | FPR | CleanDrop |
+|---|---:|---:|---:|---:|---:|
+| Vanilla RAG | 0.5080 | 0.0956 | 0.6506 | 0.0000 | 0.0000 |
+| InstructRAG-style | 0.5140 | 0.0928 | 0.6562 | 0.0000 | 0.0000 |
+| AstuteRAG-style | 0.5200 | 0.1096 | 0.6566 | 0.0000 | 0.0000 |
+| TrustRAG-style | 0.5060 | 0.0380 | 0.6632 | 0.0000 | 0.0140 |
+| SeConRAG-lite | 0.5060 | 0.0384 | 0.6631 | 0.0000 | 0.0136 |
+| Learned scorer | 0.5060 | 0.0344 | 0.6640 | 0.0000 | 0.0172 |
+| Old Ours full | 0.4900 | 0.0160 | 0.6542 | 0.0000 | 0.1024 |
+| VeriRAG verify-guided | 0.5080 | 0.0144 | 0.6704 | 0.0000 | 0.0140 |
+| Oracle filtering reference | 0.5080 | 0.0148 | 0.6703 | 0.0000 | 0.0000 |
 
-## Main Official Benchmark 500 Results
+## Attack ASR Breakdown
 
-All runs use `data_official_benchmark_500`, fixed attacks, local Qwen backend,
-and 500 gold/scorable samples per dataset.
+| Method | LM-targeted | HotFlip | GARAG | Tan et al. | AdvDecoding |
+|---|---:|---:|---:|---:|---:|
+| Vanilla RAG | 0.2180 | 0.2180 | 0.0120 | 0.0160 | 0.0140 |
+| Learned scorer | 0.0260 | 0.1080 | 0.0120 | 0.0120 | 0.0140 |
+| SeConRAG-lite | 0.0280 | 0.1240 | 0.0120 | 0.0120 | 0.0160 |
+| VeriRAG verify-guided | 0.0180 | 0.0160 | 0.0120 | 0.0120 | 0.0140 |
 
-| Dataset | Scorer | ACC | ASR | F1 | FPR | Notes |
-|---|---|---:|---:|---:|---:|---|
-| NQ | heuristic | 0.8500 | 0.0928 | 0.8777 | 0.0400 | Strong utility, higher PoisonedRAG ASR |
-| NQ | learned | 0.8200 | 0.0420 | 0.8836 | 0.0960 | Best NQ F1, lower ASR |
-| HotpotQA | heuristic | 0.5460 | 0.2248 | 0.6407 | 0.0160 | Conservative false positives |
-| HotpotQA | learned | 0.7200 | 0.1776 | 0.7678 | 0.1420 | Best HotpotQA overall |
-| MS MARCO | heuristic | 0.2540 | 0.1632 | 0.3897 | 0.0920 | Lower ASR than learned |
-| MS MARCO | learned | 0.2720 | 0.1888 | 0.4074 | 0.0640 | Slightly better utility/F1, worse ASR |
+## Interpretation
 
-Canonical reports:
+- The current model's main advantage is ASR reduction on targeted PoisonedRAG-style attacks, especially HotFlip.
+- The previous full policy had strong ASR but excessive CleanDrop. The latest verification-guided controller keeps ASR at oracle-level while recovering ACC.
+- CleanDrop is not FPR. It measures clean retrieved evidence removed by the defense; high CleanDrop can silently reduce clean ACC even when no query is rejected.
+- `*-style` baselines are unified-Qwen local wrappers unless a separate official-repo wrapper is explicitly reported.
 
-- `results/main/official_benchmark_500/heuristic_docpolicy/`
-- `results/main/official_benchmark_500/learned_docpolicy/`
-- `results/main/sparse_poisonedrag/docpolicy/`
+## Reproduction Entrypoints
 
-## Reproduction
-
-Train the learned document scorer:
+Train the official-mixed Qwen-in-loop policy:
 
 ```bash
-CUDA_VISIBLE_DEVICES=4 python scripts/train_doc_scorer.py \
-  --data-dir data_official_benchmark_500 \
-  --datasets nq hotpotqa ms_marco \
-  --attack-types poisonedrag oneshot refinerag semantic_chameleon adaptive \
-  --output experiments/doc_scorer/learned_doc_scorer.pt \
-  --epochs 6 \
-  --batch-size 256 \
-  --max-clean-docs-per-sample 10 \
-  --max-attack-docs-per-sample 10
+CUDA_VISIBLE_DEVICES=0,1,2,3 python scripts/train_nq_doc_policy.py \
+  --config configs/main/nq_doc_policy_train_qwen_reward_official_mixed.yaml
 ```
 
-Run the official benchmark with the learned scorer:
+Run the main official-mixed diagnostic evaluation:
 
 ```bash
-bash scripts/reproduce/run_official_benchmark_500_learned_gpu4_7.sh
-```
-
-Run the official benchmark with the heuristic scorer:
-
-```bash
-bash scripts/reproduce/run_official_benchmark_500_heuristic_gpu4_7.sh
+CUDA_VISIBLE_DEVICES=0,1,2,3 python scripts/diagnose_official_mixed_acc_asr.py \
+  --config configs/main/official_mixed_attack_nq500_qwen_reward_official_mixed_trained.yaml \
+  --method ours \
+  --dataset nq \
+  --split test \
+  --n-questions 500 \
+  --backend transformers \
+  --model-path /path/to/Qwen3-VL-8B-Instruct
 ```
 
 ## Current Risks
 
-- The learned scorer was trained and evaluated on the same benchmark family.
-  Add held-out or cross-attack splits before making final SOTA claims.
-- MS MARCO remains the weakest dataset. The learned scorer improves ACC/FPR
-  slightly but raises ASR, so threshold sweep is required.
-- PPO and verify contributions need explicit ablations:
-  scorer-only, PPO-only, scorer+PPO, scorer+PPO+verify.
-- Current official configs still use lightweight/fallback text encoders unless a
-  local embedding model is configured.
-
+- Official-repo baseline wrappers should be tracked separately from local style baselines.
+- The main innovation claim should be verification-guided evidence control, not query-level PPO.
+- Future ablations should isolate scorer-only, policy-only, controller-only, and Qwen-in-loop reward effects.

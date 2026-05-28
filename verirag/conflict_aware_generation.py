@@ -1,4 +1,4 @@
-"""Conflict-aware evidence control before RAG answer generation."""
+"""Verification-guided evidence control before RAG answer generation."""
 
 from __future__ import annotations
 
@@ -17,19 +17,22 @@ class ConflictAwareResult:
 
     docs: List[Dict[str, Any]]
     dropped_doc_ids: List[str] = field(default_factory=list)
+    rescued_doc_ids: List[str] = field(default_factory=list)
     should_abstain: bool = False
     abstain_reason: str = ""
     risk_score: float = 0.0
+    support_score: float = 0.0
     notes: List[str] = field(default_factory=list)
 
 
 class ConflictAwareEvidenceController:
     """
-    Final evidence controller for document-level RAG defense.
+    Final verification-guided evidence controller for document-level RAG defense.
 
-    The scorer/policy stage removes obviously adversarial documents. This stage
-    handles residual conflicts immediately before generation so the generator is
-    only exposed to low-risk, conflict-free evidence.
+    The scorer/policy stage proposes adversarial-risk decisions. This stage
+    makes the final generation-time evidence decision by preserving answerable
+    support when it is not strongly contradicted, while still removing high-risk
+    or conflicting evidence before the generator sees it.
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -37,6 +40,14 @@ class ConflictAwareEvidenceController:
         self.high_risk_threshold = float(self.config.get("high_risk_threshold", 0.70))
         self.conflict_risk_threshold = float(self.config.get("conflict_risk_threshold", 0.45))
         self.support_floor = float(self.config.get("support_floor", 0.10))
+        self.support_rescue_threshold = float(self.config.get("support_rescue_threshold", 0.45))
+        self.support_rescue_max_attack_prob = float(
+            self.config.get("support_rescue_max_attack_prob", 0.55)
+        )
+        self.support_rescue_max_conflict = float(
+            self.config.get("support_rescue_max_conflict", 0.35)
+        )
+        self.hard_drop_threshold = float(self.config.get("hard_drop_threshold", 0.88))
         self.min_docs = int(self.config.get("min_docs", 1))
         self.max_drop_fraction = float(self.config.get("max_drop_fraction", 0.85))
         self.abstain_if_no_safe_docs = bool(self.config.get("abstain_if_no_safe_docs", True))
@@ -53,6 +64,7 @@ class ConflictAwareEvidenceController:
                 should_abstain=self.abstain_if_no_safe_docs,
                 abstain_reason="no_evidence",
                 risk_score=1.0,
+                support_score=0.0,
                 notes=["no_docs_available"],
             )
 
@@ -70,6 +82,7 @@ class ConflictAwareEvidenceController:
             reverse=True,
         )
         drop_ids = set(ranked_drop_ids[:max_drop])
+        drop_ids, rescued_doc_ids = self._preserve_verified_support(docs, score_by_id, drop_ids)
         kept_docs = [
             doc for idx, doc in enumerate(docs)
             if self._doc_id(doc, idx) not in drop_ids
@@ -80,34 +93,42 @@ class ConflictAwareEvidenceController:
             notes.append(f"conflict_docs={len(conflict_doc_ids)}")
         if drop_ids:
             notes.append(f"conflict_aware_drop={len(drop_ids)}")
+        if rescued_doc_ids:
+            notes.append(f"verification_guided_rescue={len(rescued_doc_ids)}")
 
         if not kept_docs:
             if self.abstain_if_no_safe_docs:
                 return ConflictAwareResult(
                     docs=[],
                     dropped_doc_ids=sorted(drop_ids),
+                    rescued_doc_ids=sorted(rescued_doc_ids),
                     should_abstain=True,
                     abstain_reason="no_safe_evidence_after_conflict_filter",
                     risk_score=1.0,
+                    support_score=0.0,
                     notes=notes,
                 )
             best_doc = self._lowest_risk_doc(docs, score_by_id)
             kept_docs = [best_doc]
             best_id = self._doc_id(best_doc, docs.index(best_doc))
             drop_ids.discard(best_id)
+            rescued_doc_ids.add(best_id)
             notes.append("retained_lowest_risk_doc")
 
         residual_risk = self._residual_risk(kept_docs, score_by_id, conflict_doc_ids)
+        support_score = self._max_support(kept_docs, score_by_id)
         should_abstain = bool(
             residual_risk >= self.high_risk_threshold
-            and self._max_support(kept_docs, score_by_id) < self.support_floor
+            and support_score < self.support_floor
         )
         return ConflictAwareResult(
             docs=kept_docs,
             dropped_doc_ids=sorted(drop_ids),
+            rescued_doc_ids=sorted(rescued_doc_ids),
             should_abstain=should_abstain,
             abstain_reason="residual_conflict_risk" if should_abstain else "",
             risk_score=residual_risk,
+            support_score=support_score,
             notes=notes,
         )
 
@@ -157,13 +178,76 @@ class ConflictAwareEvidenceController:
             row = score_by_id.get(doc_id, {})
             attack_prob = float(row.get("attack_prob", 0.0))
             conflict_score = float(row.get("conflict_score", 0.0))
+            policy_dropped = row.get("nq_doc_policy_kept") is False
+            scorer_dropped = row.get("doc_scorer_kept") is False
+            proposed_drop = policy_dropped or scorer_dropped
+            policy_keep_prob = float(row.get("nq_doc_policy_keep_prob", 1.0))
+            if proposed_drop and self._is_verifiable_support(row):
+                continue
             if attack_prob >= self.high_risk_threshold:
                 out.add(doc_id)
             elif doc_id in conflict_set and attack_prob >= self.conflict_risk_threshold:
                 out.add(doc_id)
             elif conflict_score > 0.0 and attack_prob >= self.conflict_risk_threshold:
                 out.add(doc_id)
+            elif proposed_drop and policy_keep_prob < 0.5:
+                out.add(doc_id)
+            elif scorer_dropped:
+                out.add(doc_id)
         return out
+
+    def _is_verifiable_support(self, row: Dict[str, Any]) -> bool:
+        support = float(row.get("support_score", 0.0))
+        attack_prob = float(row.get("attack_prob", 0.0))
+        conflict_score = float(row.get("conflict_score", 0.0))
+        if attack_prob >= self.hard_drop_threshold:
+            return False
+        return (
+            support >= self.support_rescue_threshold
+            and attack_prob <= self.support_rescue_max_attack_prob
+            and conflict_score <= self.support_rescue_max_conflict
+        )
+
+    def _preserve_verified_support(
+        self,
+        docs: List[Dict[str, Any]],
+        score_by_id: Dict[str, Dict[str, Any]],
+        drop_ids: Set[str],
+    ) -> tuple[Set[str], Set[str]]:
+        rescued: Set[str] = set()
+        for idx, doc in enumerate(docs):
+            doc_id = self._doc_id(doc, idx)
+            row = score_by_id.get(doc_id, {})
+            proposed_drop = row.get("nq_doc_policy_kept") is False or row.get("doc_scorer_kept") is False
+            if self._is_verifiable_support(row) and proposed_drop:
+                rescued.add(doc_id)
+            if doc_id in drop_ids and self._is_verifiable_support(row):
+                drop_ids.remove(doc_id)
+                rescued.add(doc_id)
+
+        kept_docs = [
+            doc for idx, doc in enumerate(docs)
+            if self._doc_id(doc, idx) not in drop_ids
+        ]
+        if self._max_support(kept_docs, score_by_id) >= self.support_floor:
+            return drop_ids, rescued
+
+        candidates: List[tuple[float, str]] = []
+        for idx, doc in enumerate(docs):
+            doc_id = self._doc_id(doc, idx)
+            if doc_id not in drop_ids:
+                continue
+            row = score_by_id.get(doc_id, {})
+            support = float(row.get("support_score", 0.0))
+            if support <= 0.0 or float(row.get("attack_prob", 0.0)) >= self.hard_drop_threshold:
+                continue
+            risk = self._risk_value(row, False)
+            candidates.append((risk - support, doc_id))
+        if candidates:
+            _, doc_id = min(candidates)
+            drop_ids.remove(doc_id)
+            rescued.add(doc_id)
+        return drop_ids, rescued
 
     def _risk_value(self, row: Dict[str, Any], is_conflict: bool) -> float:
         return (

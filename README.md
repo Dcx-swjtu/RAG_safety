@@ -1,6 +1,6 @@
-# VeriRAG: Document-Level RAG Defense with Conflict-Aware Generation
+# VeriRAG: Verification-Guided Evidence Control for RAG Safety
 
-> **VeriRAG** 当前主线是文档级 RAG 投毒防御：先对每篇检索文档进行风险建模，再执行 keep/drop/abstain 证据选择，最后在生成前做冲突感知证据控制，避免 LLM 暴露在污染证据链中。
+> **VeriRAG** 当前主线是 verification-guided document-level RAG defense：先对每篇检索文档进行风险建模，再执行 keep/drop/abstain 证据选择，最后用 verify 信号在生成前控制证据暴露，避免 Qwen/LLM 被污染证据链带偏。
 
 ---
 
@@ -16,8 +16,8 @@
 Query + Retrieved Docs
   -> Document Risk Scorer
   -> Document-level Evidence Policy
-  -> Conflict-aware Evidence Controller
-  -> Safe Generation / Abstain
+  -> Verification-guided Evidence Controller
+  -> Protected Qwen Generation / Abstain
 ```
 
 这条线对应当前正式 NQ/PoisonedRAG 实验中实际起作用的模块：
@@ -25,10 +25,34 @@ Query + Retrieved Docs
 - **Document Risk Scorer**: 使用 query-doc / doc-doc 相似度、rank、style、outlier、cluster、support/conflict 等真实特征评估每篇文档风险。
 - **Learned Adversarial Doc Scorer**: 在启发式风险特征之上训练文档级攻击分类器，是当前最强的稳定过滤基线。
 - **NQ Document Policy**: 输出文档级 keep/drop mask 和全局 abstain 动作，用于在 scorer 之上学习证据选择策略。
-- **Conflict-aware Evidence Controller**: 在答案生成前再次过滤残余高风险/冲突证据，只把低风险证据交给生成器。
+- **Verification-guided Evidence Controller**: 在答案生成前用 support/conflict/risk 信号复核证据，硬删高风险攻击证据，同时 rescue 高支持度 clean 证据，降低 CleanDrop。
 - **Official-aligned Evaluation**: BEIR/query/doc/qrels 负责检索证据，官方 QA 文件负责答案，`eval_gold=true` 样本才计入 ACC/F1。
 
-旧版 Claim→Verify→Answer 和 query-level PPO 模块仍保留为辅助审计/冲突信号，但不再作为主性能叙事。
+旧版 Claim→Verify→Answer 和 query-level PPO 模块仍保留为辅助审计/冲突信号；当前论文主线中的 verify 不是 query-level verification depth，而是生成前的 evidence verification/control。
+
+---
+
+## Latest Official-Mixed NQ500 Result
+
+当前主结果使用 unified Qwen backend 和 official-mixed NQ500 fixed-attack benchmark：
+
+- Dataset: `data_official_mixed_attack_nq500`
+- Generator: `Qwen3-VL-8B-Instruct`
+- Attacks: `poisonedrag_lm_targeted`, `poisonedrag_hotflip`, `garag`, `tan_et_al`, `advdecoding`
+- Training split: `data_official_mixed_attack_nq_split/train`
+- Test split: 500 held-out official-answer-aligned NQ questions
+
+| Method | ACC | ASR | F1 | CleanDrop |
+|---|---:|---:|---:|---:|
+| Vanilla RAG | 0.5080 | 0.0956 | 0.6506 | 0.0000 |
+| Learned scorer | 0.5060 | 0.0344 | 0.6640 | 0.0172 |
+| SeConRAG-lite | 0.5060 | 0.0384 | 0.6631 | 0.0136 |
+| Old Ours full | 0.4900 | 0.0160 | 0.6542 | 0.1024 |
+| **VeriRAG verify-guided** | **0.5080** | **0.0144** | **0.6704** | **0.0140** |
+| Oracle filtering reference | 0.5080 | 0.0148 | 0.6703 | 0.0000 |
+
+CleanDrop is the fraction of clean retrieved evidence dropped by the defense. The latest verify-guided controller recovers ACC by reducing clean evidence damage while keeping ASR at oracle-level. Do not compare these numbers directly with older qrels-context NQ tables because this official-mixed setup uses PoisonedRAG official Contriever top-5 contexts.
+
 
 ---
 
@@ -63,7 +87,7 @@ verirag/
 │   ├── nq_doc_features.py               # query-doc/doc-doc policy features
 │   ├── nq_doc_policy.py                 # per-document keep/drop/abstain policy
 │   ├── nq_document_mask_environment.py  # fixed-attack NQ policy environment
-│   ├── conflict_aware_generation.py     # pre-generation evidence control
+│   ├── conflict_aware_generation.py     # verification-guided evidence control
 │   ├── defense_orchestrator.py          # pipeline orchestration
 │   ├── claim_extractor.py               # auxiliary claim extraction
 │   └── cross_validator.py               # auxiliary conflict signals

@@ -193,6 +193,9 @@ class DefenseOrchestrator:
         self.enable_conflict_aware_generation = bool(
             self.config.get('enable_conflict_aware_generation', True)
         )
+        self.enable_verification_guided_evidence = bool(
+            self.config.get('enable_verification_guided_evidence', True)
+        )
         self.conflict_aware_query_instruction = bool(
             self.config.get('conflict_aware_query_instruction', False)
         )
@@ -308,7 +311,10 @@ class DefenseOrchestrator:
                     min_docs=self.min_docs_after_filter,
                     max_drop_fraction=self.max_doc_drop_fraction,
                 )
+                dropped_set_for_scores = set(dropped_doc_ids)
                 result.doc_scores = [score.to_dict() for score in doc_scores]
+                for row in result.doc_scores:
+                    row['doc_scorer_kept'] = str(row.get('doc_id')) not in dropped_set_for_scores
                 result.filtered_doc_ids = dropped_doc_ids
                 high_risk_docs = [
                     score for score in doc_scores
@@ -389,15 +395,31 @@ class DefenseOrchestrator:
             t0 = time.time()
             generation_query = query
             if self.enable_conflict_aware_generation:
+                controller_input_docs = (
+                    retrieved_docs if self.enable_verification_guided_evidence and result.doc_scores else filtered_docs
+                )
                 evidence_result = self.conflict_aware_controller.filter_evidence(
-                    filtered_docs,
+                    controller_input_docs,
                     doc_scores=result.doc_scores,
                     validation_reports=validation_reports,
                 )
+                if evidence_result.rescued_doc_ids:
+                    rescued = set(evidence_result.rescued_doc_ids)
+                    result.filtered_doc_ids = [
+                        doc_id for doc_id in result.filtered_doc_ids if doc_id not in rescued
+                    ]
+                    result.detected_attacks = [
+                        row for row in result.detected_attacks
+                        if str(row.get('doc_id')) not in rescued
+                    ]
+                    result.risk_indicators.append(
+                        f"Verification-guided evidence rescued {len(evidence_result.rescued_doc_ids)} support docs"
+                    )
                 if evidence_result.dropped_doc_ids:
                     existing = set(result.filtered_doc_ids)
+                    rescued = set(evidence_result.rescued_doc_ids)
                     for doc_id in evidence_result.dropped_doc_ids:
-                        if doc_id not in existing:
+                        if doc_id not in existing and doc_id not in rescued:
                             result.filtered_doc_ids.append(doc_id)
                     result.risk_indicators.append(
                         f"Conflict-aware generation dropped {len(evidence_result.dropped_doc_ids)} docs"
@@ -409,10 +431,12 @@ class DefenseOrchestrator:
                             'severity': 'high',
                         }
                         for doc_id in evidence_result.dropped_doc_ids
+                        if doc_id not in set(evidence_result.rescued_doc_ids)
                     ])
                 execution_trace.append(
-                    f"Conflict-aware evidence: kept {len(evidence_result.docs)}/{len(filtered_docs)} docs "
-                    f"(risk={evidence_result.risk_score:.3f}, abstain={evidence_result.should_abstain})"
+                    f"Verification-guided evidence: kept {len(evidence_result.docs)}/{len(controller_input_docs)} docs "
+                    f"(risk={evidence_result.risk_score:.3f}, support={evidence_result.support_score:.3f}, "
+                    f"abstain={evidence_result.should_abstain})"
                 )
                 if evidence_result.notes:
                     result.risk_indicators.extend(evidence_result.notes)

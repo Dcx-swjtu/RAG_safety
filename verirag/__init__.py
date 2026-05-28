@@ -1,10 +1,10 @@
 """
-VeriRAG: document-level RAG defense with conflict-aware generation.
+VeriRAG: verification-guided document-level RAG defense.
 
 Main path:
 - adversarial_doc_scorer / learned_doc_scorer: document risk scoring
 - nq_doc_features / nq_doc_policy: per-document keep/drop/abstain policy
-- conflict_aware_generation: final evidence control before generation
+- conflict_aware_generation: verification-guided support-preserving evidence control
 - defense_orchestrator: end-to-end pipeline orchestration
 
 Claim extraction, cross validation, and query-level PPO remain available as
