@@ -166,45 +166,8 @@ python scripts/train.py \
     --phase adversarial
 ```
 
-### 评估
 
-```bash
-# 完整评估
-python scripts/evaluate.py \
-    --config configs/config.yaml \
-    --checkpoint checkpoints/final_model.pt \
-    --dataset nq \
-    --n_questions 100 \
-    --output evaluation_results.md
 
-# 多数据集评估
-python scripts/evaluate.py \
-    --config configs/config.yaml \
-    --checkpoint checkpoints/final_model.pt \
-    --output evaluation_results.md
-```
-
-### 单次防御推理
-
-没有本地 Qwen 权重时也可以先跑完整防御链路，系统会使用轻量生成器和词法检索兜底：
-
-```bash
-python scripts/run_defense.py \
-    --query "What is the revenue of Company X?" \
-    --docs ./data/demo_docs.jsonl \
-    --backend fallback \
-    --top-k 5
-```
-
-有本地 Qwen/Qwen-8B-Chat 权重后，可切换到真实模型推理：
-
-```bash
-python scripts/run_defense.py \
-    --query "What is the revenue of Company X?" \
-    --docs ./data/demo_docs.jsonl \
-    --model-path ./models/Qwen-8B-Chat \
-    --backend vllm
-```
 
 ### 运行测试
 
