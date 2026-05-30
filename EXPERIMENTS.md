@@ -40,6 +40,12 @@ mixed official-code attack implementations.
 | SeConRAG-lite | 0.0280 | 0.1240 | 0.0120 | 0.0120 | 0.0160 |
 | VeriRAG verify-guided | 0.0180 | 0.0160 | 0.0120 | 0.0120 | 0.0140 |
 
+## Three-Dataset ACC/ASR Snapshot
+
+Current NQ, HotpotQA, and MS MARCO formal results are summarized in
+`docs/official_mixed_three_dataset_acc_asr.md`. The table reports only clean
+ACC and average ASR over the five fixed attack families.
+
 ## Interpretation
 
 - The current model's main advantage is ASR reduction on targeted PoisonedRAG-style attacks, especially HotFlip.
