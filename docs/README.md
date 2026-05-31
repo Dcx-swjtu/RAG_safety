@@ -8,6 +8,7 @@ This directory contains the paper-facing technical documentation for the current
 - [RL Training Pipeline](training_pipeline.md)
 - [Data Construction Plan](data_construction.md)
 - [Evaluation Protocol](evaluation_protocol.md)
+- [Strict ASR Protocol](strict_asr_protocol.md)
 - [Current Mainline](CURRENT_MAINLINE.md)
 - [NQ Train / Dev / Test Protocol](NQ_TRAIN_DEV_TEST_PROTOCOL.md)
 

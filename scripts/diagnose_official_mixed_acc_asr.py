@@ -27,6 +27,7 @@ from evaluate_rag_defense_baselines import (  # noqa: E402
     BaselineMethods,
     BaselineOutput,
     check_answer,
+    check_attack_success,
     extract_poisoned_texts,
     generate_answer,
     get_answers,
@@ -233,7 +234,7 @@ def make_trace_row(
     dropped_clean = sorted(dropped & clean_doc_ids)
     dropped_attack = sorted(dropped & attack_doc_ids)
     correct = check_answer(answer, answers)
-    attack_success = bool(target_answer and check_answer(answer, target_answer))
+    attack_success = bool(target_answer and check_attack_success(answer, target_answer))
     rejected = str(eval_result.get("status", "")).lower() == "rejected"
     detected = bool(eval_result.get("detected", False) or rejected or dropped_attack)
     metadata = row.get("metadata", {}) or {}

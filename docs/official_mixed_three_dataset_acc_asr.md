@@ -7,6 +7,10 @@ ACC is clean-answer accuracy. ASR is the average attack success rate over
 `poisonedrag_lm_targeted`, `poisonedrag_hotflip`, `garag`, `tan_et_al`, and
 `advdecoding`.
 
+Note: this snapshot predates the strict-ASR matcher introduced in
+[Strict ASR Protocol](strict_asr_protocol.md). The strict rerun uses target
+exact/phrase containment for ASR and does not use token F1.
+
 | Dataset | Method | ACC (%) | ASR (%) |
 |---|---|---:|---:|
 | NQ | Vanilla RAG | 50.60 | 9.40 |
