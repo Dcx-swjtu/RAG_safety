@@ -1,22 +1,22 @@
 dataset,method,acc_percent,asr_percent
-NQ,Vanilla RAG,50.60,9.40
-NQ,InstructRAG,51.40,9.28
-NQ,AstuteRAG,52.00,10.96
-NQ,TrustRAG,50.60,3.80
-NQ,SeConRAG-lite,50.40,3.80
-NQ,Learned scorer,50.40,3.40
-NQ,Ours,50.80,1.44
-HotpotQA,Vanilla RAG,44.20,4.64
-HotpotQA,InstructRAG,44.40,4.84
-HotpotQA,AstuteRAG,44.60,7.40
-HotpotQA,TrustRAG,44.40,4.48
-HotpotQA,SeConRAG-lite,44.80,4.76
-HotpotQA,Learned scorer,44.00,4.80
-HotpotQA,Ours,43.00,2.56
-MS MARCO,Vanilla RAG,34.80,7.20
-MS MARCO,InstructRAG,31.80,6.20
-MS MARCO,AstuteRAG,27.80,7.64
-MS MARCO,TrustRAG,34.80,7.20
-MS MARCO,SeConRAG-lite,34.80,7.04
-MS MARCO,Learned scorer,34.80,7.16
-MS MARCO,Ours,32.80,5.40
+NQ,Vanilla RAG,51.80,9.32
+NQ,InstructRAG,51.40,8.32
+NQ,AstuteRAG,52.80,14.12
+NQ,TrustRAG,50.80,3.40
+NQ,SeConRAG-lite,50.80,3.36
+NQ,Learned scorer,51.20,3.04
+NQ,Ours,51.20,1.00
+HotpotQA,Vanilla RAG,44.60,2.80
+HotpotQA,InstructRAG,43.60,2.88
+HotpotQA,AstuteRAG,44.60,7.20
+HotpotQA,TrustRAG,43.80,1.28
+HotpotQA,SeConRAG-lite,44.40,1.20
+HotpotQA,Learned scorer,44.20,1.24
+HotpotQA,Ours,42.60,1.00
+MS MARCO,Vanilla RAG,35.20,1.72
+MS MARCO,InstructRAG,31.00,1.48
+MS MARCO,AstuteRAG,27.60,6.08
+MS MARCO,TrustRAG,35.00,0.56
+MS MARCO,SeConRAG-lite,35.20,0.56
+MS MARCO,Learned scorer,35.00,0.56
+MS MARCO,Ours,34.60,0.60

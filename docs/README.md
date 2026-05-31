@@ -9,6 +9,7 @@ This directory contains the paper-facing technical documentation for the current
 - [Data Construction Plan](data_construction.md)
 - [Evaluation Protocol](evaluation_protocol.md)
 - [Strict ASR Protocol](strict_asr_protocol.md)
+- [Strict-ASR Three-Dataset Results](strict_asr_three_dataset_results_20260531.md)
 - [Current Mainline](CURRENT_MAINLINE.md)
 - [NQ Train / Dev / Test Protocol](NQ_TRAIN_DEV_TEST_PROTOCOL.md)
 
