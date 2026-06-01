@@ -296,9 +296,7 @@ Policy Network 决策 → action
 
 ---
 
-## 配置说明
 
-配置文件路径: `configs/config.yaml`
 
 ### 关键配置项
 
