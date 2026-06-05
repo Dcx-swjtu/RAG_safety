@@ -259,8 +259,3 @@ interfaces, but should not be used as the primary paper story:
   year={2025}
 }
 ```
-
-## License
-
-No license file is currently included in this repository. Add a `LICENSE` file
-before distributing or reusing the code outside the project.
